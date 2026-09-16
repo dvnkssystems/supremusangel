@@ -6,3 +6,4 @@ supremusangel.patches.v1_2.create_telegram_bots_module
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 supremusangel.patches.v1_0.create_rm_performance_fields
+supremusangel.patches.v1_2.create_telegram_checklist_fields

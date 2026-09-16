@@ -50,3 +50,8 @@ def webhook_secret(settings_name):
 	token = get_token(settings_name) or ""
 	key = frappe.local.conf.get("encryption_key") or ""
 	return hashlib.sha256(f"{key}:{token}".encode()).hexdigest()
+
+
+def site_url():
+	"""Public HTTPS base URL (site host_name may be configured as http)."""
+	return frappe.utils.get_url().replace("http://", "https://", 1)

@@ -66,6 +66,7 @@ website_generators = ["Job Opening"]
 doctype_js = {
     "Customer": "public/js/customer.js",
     "Sales Person": "public/js/sales_person.js",
+    "Employee": "public/js/employee.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -348,6 +349,12 @@ scheduler_events = {
     "monthly": [
         "supremusangel.supremus_angel.incentive_tasks.run_monthly_incentives",
     ],
+    "cron": {
+        # Mon-Sat 10:00: Telegram onboarding checklist reminders + HR summary.
+        "0 10 * * 1-6": [
+            "supremusangel.telegram_bots.hr_checklist.daily_reminders",
+        ],
+    },
 }
 
 on_login = "supremusangel.supremus_angel.portal_notifications.send_kyc_reminder_on_login"

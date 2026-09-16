@@ -11,7 +11,7 @@ WEBHOOK_PATH = "/api/method/supremusangel.telegram_bots.api.webhook"
 
 
 def set_webhooks():
-	base = frappe.utils.get_url().replace("http://", "https://", 1)
+	base = tg.site_url()
 	for s in frappe.get_all("Telegram Settings", fields=["name", "bot_name"]):
 		tg.call(
 			s.name,
@@ -21,7 +21,10 @@ def set_webhooks():
 			allowed_updates=["message", "callback_query"],
 			drop_pending_updates=True,
 		)
-		tg.call(s.name, "setMyCommands", commands=[{"command": "start", "description": "Start / link your account"}])
+		commands = [{"command": "start", "description": "Start / link your account"}]
+		if s.name == "Supremus HR Bot":
+			commands.append({"command": "checklist", "description": "My onboarding checklist"})
+		tg.call(s.name, "setMyCommands", commands=commands)
 		info = tg.call(s.name, "getWebhookInfo")
 		print(s.bot_name, info.get("url"), "pending:", info.get("pending_update_count"))
 

@@ -3,7 +3,7 @@
 import frappe
 from frappe.utils import escape_html
 
-from supremusangel.telegram_bots import linking, tg
+from supremusangel.telegram_bots import hr_checklist, linking, tg
 
 SHARE_PHONE_KEYBOARD = {
 	"keyboard": [[{"text": "📱 Share my phone number", "request_contact": True}]],
@@ -15,13 +15,17 @@ REMOVE_KEYBOARD = {"remove_keyboard": True}
 
 
 def process_update(settings_name, update):
-	message = update.get("message")
+	callback = update.get("callback_query")
+	message = update.get("message") or (callback or {}).get("message")
 	if not message or message.get("chat", {}).get("type") != "private":
-		return  # group messages and button callbacks are handled in later phases
+		return  # group messages are not handled
 
 	try:
 		frappe.set_user("Administrator")
-		handle_message(settings_name, message)
+		if callback:
+			handle_callback(settings_name, callback)
+		else:
+			handle_message(settings_name, message)
 		frappe.db.commit()
 	except Exception:
 		frappe.db.rollback()
@@ -47,6 +51,12 @@ def handle_message(settings_name, message):
 			"It must be the mobile number registered with HR.",
 			reply_markup=SHARE_PHONE_KEYBOARD,
 		)
+
+	text = (message.get("text") or "").strip().split("@")[0]
+	if settings_name == hr_checklist.HR_BOT and text in ("/checklist", "/start"):
+		employee = frappe.db.get_value("Telegram Link", link.name, "employee")
+		if employee:
+			return hr_checklist.send_checklist(employee)
 
 	tg.send_message(
 		settings_name,
@@ -100,6 +110,30 @@ def handle_contact(settings_name, bot_name, message):
 		"You will now receive Supremus updates here.",
 		reply_markup=REMOVE_KEYBOARD,
 	)
+	if settings_name == hr_checklist.HR_BOT and link.employee:
+		onboarded = frappe.db.get_value("Employee", link.employee, "custom_checklist_completed_on")
+		if not onboarded:
+			hr_checklist.send_checklist(link.employee)
+
+
+def handle_callback(settings_name, callback):
+	message = callback["message"]
+	link = linking.get_link(settings_name, callback["from"]["id"])
+	answer = {"callback_query_id": callback["id"]}
+
+	if not link:
+		answer["text"] = "Please link your account first: send /start"
+	elif callback.get("data") == "chk:refresh" and settings_name == hr_checklist.HR_BOT:
+		employee = frappe.db.get_value("Telegram Link", link.name, "employee")
+		if employee:
+			hr_checklist.refresh_message(message["chat"]["id"], message["message_id"], employee)
+			answer["text"] = "Checklist updated"
+		else:
+			answer["text"] = "No employee record is linked to your account"
+	else:
+		answer["text"] = "This button is no longer active"
+
+	tg.call(settings_name, "answerCallbackQuery", **answer)
 
 
 def _safe_send(settings_name, chat_id, text):
