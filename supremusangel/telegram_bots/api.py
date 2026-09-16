@@ -9,6 +9,8 @@ from supremusangel.telegram_bots import tg
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def webhook(bot=None):
 	"""Receive a Telegram update. Always answers 200 quickly; work happens in a job."""
+	# JSON POST bodies replace form_dict, so the query-string arg must be read directly
+	bot = bot or frappe.request.args.get("bot")
 	settings_name = frappe.db.get_value("Telegram Settings", {"bot_name": bot}, "name") if bot else None
 	if not settings_name:
 		frappe.local.response["http_status_code"] = 404
