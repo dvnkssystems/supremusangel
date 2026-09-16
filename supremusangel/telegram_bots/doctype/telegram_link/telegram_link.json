@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-09-16 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "telegram_settings",
+  "user",
+  "employee",
+  "full_name",
+  "enabled",
+  "column_break_1",
+  "telegram_user_id",
+  "chat_id",
+  "telegram_username",
+  "phone",
+  "link_method",
+  "linked_on"
+ ],
+ "fields": [
+  {"fieldname": "telegram_settings", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "Bot", "options": "Telegram Settings", "reqd": 1},
+  {"fieldname": "user", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "User", "options": "User", "reqd": 1},
+  {"fieldname": "employee", "fieldtype": "Link", "label": "Employee", "options": "Employee"},
+  {"fetch_from": "user.full_name", "fieldname": "full_name", "fieldtype": "Data", "in_list_view": 1, "label": "Full Name", "read_only": 1},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
+  {"fieldname": "telegram_user_id", "fieldtype": "Data", "label": "Telegram User ID", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "chat_id", "fieldtype": "Data", "label": "Chat ID", "read_only": 1, "reqd": 1},
+  {"fieldname": "telegram_username", "fieldtype": "Data", "label": "Telegram Username", "read_only": 1},
+  {"fieldname": "phone", "fieldtype": "Data", "label": "Verified Phone", "read_only": 1},
+  {"fieldname": "link_method", "fieldtype": "Select", "label": "Link Method", "options": "Phone\nInvite", "read_only": 1},
+  {"fieldname": "linked_on", "fieldtype": "Datetime", "label": "Linked On", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-16 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Telegram Bots",
+ "name": "Telegram Link",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"read": 1, "report": 1, "role": "HR Manager", "write": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "full_name",
+ "track_changes": 1
+}
