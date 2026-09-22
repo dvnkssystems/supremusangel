@@ -41,7 +41,7 @@ class TestCommissionSchemeOptIn(unittest.TestCase):
 
     def test_direct_sales_checkbox_selects_direct_scheme(self):
         doc = self.invoice()
-        doc.custom_direct_sales = 1
+        doc.custom_is_direct = 1
         self.prepare(doc, True)
         self.assertEqual(doc.custom_commission_scheme, schemes.DIRECT)
 

@@ -63,7 +63,7 @@ class TestDirectLadder(FrappeTestCase):
         branch = frappe.db.get_value("Branch", {}, "name")
         customer = frappe.db.get_value("Customer", {}, "name")
         si = frappe.get_doc({"doctype": "Sales Invoice", "company": self.company, "customer": customer,
-                             "branch": branch, "custom_primary_agent": seller, "custom_direct_sales": direct,
+                             "branch": branch, "custom_primary_agent": seller, "custom_is_direct": direct,
                              "items": [{"item_code": DEAL, "qty": qty, "rate": rate, "branch": branch}]})
         si.set_missing_values()
         si.items[0].rate = rate

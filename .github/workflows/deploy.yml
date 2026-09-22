@@ -1,0 +1,58 @@
+name: Deploy
+
+# Auto-deploy to the production server on every push to develop (same setup as
+# customer_portal). GitHub SSHes in as DEPLOY_USER (passwordless sudo) and runs
+# all bench/git commands as the `frappe` user that owns the bench.
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+# Never run two deploys at once; let an in-flight one finish.
+concurrency:
+  group: deploy-supremusangel
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            set -e
+            BENCH_DIR="${{ secrets.BENCH_DIR }}"
+            SITE="${{ secrets.SITE_NAME }}"
+            APP="supremusangel"
+
+            # All bench/git work runs as the frappe user that owns the bench.
+            run() { sudo -u frappe -H bash -lc "$1"; }
+
+            echo "==> Pulling latest $APP (develop)"
+            run "cd $BENCH_DIR/apps/$APP && REMOTE=\$(git remote | grep -m1 -E '^(upstream|origin)\$') && git fetch --prune \$REMOTE && git checkout -B develop \$REMOTE/develop && git reset --hard \$REMOTE/develop"
+
+            echo "==> Installing any new Python deps"
+            run "cd $BENCH_DIR && ./env/bin/pip install -q -U -e apps/$APP" || true
+
+            echo "==> Building assets for $APP"
+            run "cd $BENCH_DIR && bench build --app $APP"
+
+            echo "==> Running migrations on $SITE"
+            run "cd $BENCH_DIR && bench --site $SITE migrate"
+
+            echo "==> Clearing cache"
+            run "cd $BENCH_DIR && bench --site $SITE clear-cache"
+
+            echo "==> Restarting services (supervisor)"
+            sudo supervisorctl restart all
+
+            echo "==> Deploy complete"

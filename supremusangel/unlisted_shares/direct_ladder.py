@@ -1,6 +1,6 @@
 """Direct Sales price ladder, configured entirely on Item Price.
 
-Runs only on invoices with the **Direct Sales** checkbox ticked. Unticked share
+Runs only on invoices with **Is Direct Plan** (`custom_is_direct`) ticked. Unticked share
 invoices keep the percentage Tier Commission.
 
 Everything lives in one selling price list, **Direct Sales**, as three kinds of row:
@@ -195,7 +195,7 @@ def sold_quantity(item_code, partner, exclude_invoice=None):
     return flt(frappe.db.sql(
         """select coalesce(sum(sii.qty), 0) from `tabSales Invoice Item` sii
            join `tabSales Invoice` si on si.name = sii.parent and sii.parenttype = 'Sales Invoice'
-           where si.docstatus = 1 and si.custom_direct_sales = 1 and si.custom_direct_sales_partner = %s
+           where si.docstatus = 1 and si.custom_is_direct = 1 and si.custom_direct_sales_partner = %s
              and sii.item_code = %s and si.name != %s""",
         (partner, item_code, exclude_invoice or ""),
     )[0][0])

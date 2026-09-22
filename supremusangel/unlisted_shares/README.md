@@ -50,7 +50,7 @@ The Supremus Angel workspace includes the required shortcuts, four number cards,
 
 ## Direct Sales price ladder
 
-Ticking **Direct Sales** on a share invoice replaces Tier Commission with a price ladder. When the box is unticked, the direct sales fields are cleared and the invoice uses Tier Commission or Monthly Incentive as before.
+Ticking **Is Direct Plan** (`custom_is_direct`) on a share invoice replaces Tier Commission with a price ladder. It is the same fieldname as the Sales Order's Is Direct Plan (added by customer_portal), so an invoice made from a Direct plan order arrives ticked. Desk users can tick it on the Sales Order too (a Property Setter lifts its read-only). When the box is unticked, the direct sales fields are cleared and the invoice uses Tier Commission or Monthly Incentive as before. The old **Direct Sales** checkbox is retired and hidden; its values were copied into Is Direct Plan on migrate.
 
 **All configuration is on Item Price, in the "Direct Sales" price list.** There are three kinds of row:
 

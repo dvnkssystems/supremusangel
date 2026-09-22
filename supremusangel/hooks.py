@@ -387,7 +387,7 @@ for _dt, _function in {"Sales Invoice": "invoice", "Customer": "customer", "Sale
 
 _share_fields = ["Sales Person-custom_use_tier_commission", "Sales Invoice-custom_commission_scheme",
                  "Sales Person-custom_tier", "Sales Person-custom_agent_user", "Item-custom_logo",
-                 "Customer-custom_sales_person", "Sales Invoice-custom_unlisted_shares", "Sales Invoice-custom_primary_agent", "Sales Invoice-custom_direct_sales", "Item Price-custom_agent", "Sales Invoice-custom_direct_sales_partner", "Sales Invoice-custom_direct_sales_rate",
+                 "Customer-custom_sales_person", "Sales Invoice-custom_unlisted_shares", "Sales Invoice-custom_primary_agent", "Sales Invoice-custom_direct_sales", "Sales Invoice-custom_is_direct", "Item Price-custom_agent", "Sales Invoice-custom_direct_sales_partner", "Sales Invoice-custom_direct_sales_rate",
                  "Sales Invoice-custom_pending_since", "Sales Invoice-custom_direct_sales_mandate",
                  "Sales Invoice-custom_direct_sales_rate_revision", "Sales Invoice-custom_company_settlement_rate",
                  "Sales Invoice-custom_direct_sales_partner_earning", "Sales Invoice-workflow_state", "Sales Team-custom_commission_tier",
