@@ -25,6 +25,7 @@ silently rewrite a payout that has already been locked in.
 """
 
 import frappe
+from supremusangel.unlisted_shares.schemes import is_monthly_invoice, uses_tier_commission
 from frappe.utils import getdate
 
 from supremusangel.supremus_angel.incentive_tasks import (
@@ -57,7 +58,7 @@ def on_invoice_cancel(doc, method=None):
 
 
 def _enqueue_recalc(doc):
-	if doc.get("custom_unlisted_shares"):
+	if not is_monthly_invoice(doc):
 		return
 	persons = _sales_persons_on_invoice(doc)
 	if not persons:
@@ -112,12 +113,12 @@ def _build_work_list(persons, month):
 	scheme_by_person = {}
 
 	for sp in persons:
-		if sp and sp not in scheme_by_person:
+		if sp and sp not in scheme_by_person and not uses_tier_commission(sp):
 			scheme_by_person[sp] = _scheme_of(sp)
 
 	for sp in persons:
 		for ancestor in _ancestors(sp):
-			if ancestor in scheme_by_person:
+			if ancestor in scheme_by_person or uses_tier_commission(ancestor):
 				continue
 			scheme = _scheme_of(ancestor)
 			if scheme in ("TL", "BM"):
@@ -133,6 +134,8 @@ def _upsert_calc(scheme, sales_person, month):
 
 	Returns True when recomputed, False when intentionally skipped (locked
 	status, or a brand-new calc for which no salary could be resolved)."""
+	if uses_tier_commission(sales_person):
+		return False
 	doctype = _DOCTYPE[scheme]
 	field = _LINK_FIELD[scheme]
 

@@ -6,6 +6,7 @@ the rounded company-currency payout on base_net_total, excluding tax.
 """
 import frappe
 from frappe.utils import cint, flt
+from supremusangel.unlisted_shares.schemes import DIRECT, MONTHLY, TIER, uses_tier_commission
 
 GROUP = "Unlisted Shares"
 
@@ -21,6 +22,9 @@ def is_share_invoice(doc):
 
 
 def prepare(doc, method=None):
+    if doc.get("docstatus") == 2 or getattr(doc, "_action", None) == "update_after_submit":
+        return
+    previous_scheme = doc.get("custom_commission_scheme")
     share = is_share_invoice(doc)
     from supremusangel.unlisted_shares.permissions import agent_only
     if agent_only() and not share:
@@ -28,6 +32,7 @@ def prepare(doc, method=None):
     was_share = doc.get("custom_unlisted_shares")
     doc.custom_unlisted_shares = int(share)
     if not share:
+        doc.custom_commission_scheme = MONTHLY
         if was_share and doc.custom_primary_agent:
             doc.set("sales_team", [{"sales_person": doc.custom_primary_agent, "allocated_percentage": 100}])
         doc.custom_primary_agent = None
@@ -44,6 +49,24 @@ def prepare(doc, method=None):
     from supremusangel.unlisted_shares.permissions import is_admin, linked_agent
     if not is_admin() and doc.custom_primary_agent != linked_agent():
         frappe.throw("Agents can create transactions only for themselves.", frappe.PermissionError)
+    # Direct Sales (price ladder) runs only when ticked; otherwise drop any stale
+    # rate details so the invoice falls through to Tier / Monthly commission.
+    if not doc.get("custom_direct_sales"):
+        doc.custom_direct_sales_partner = None
+        doc.custom_direct_sales_rate = None
+        doc.custom_direct_sales_mandate = None
+        doc.custom_direct_sales_rate_revision = None
+        doc.custom_company_settlement_rate = 0
+        doc.custom_direct_sales_partner_earning = 0
+    if doc.get("custom_direct_sales"):
+        doc.custom_commission_scheme = DIRECT
+    elif uses_tier_commission(doc.custom_primary_agent):
+        doc.custom_commission_scheme = TIER
+    else:
+        doc.custom_commission_scheme = MONTHLY
+        if previous_scheme in (TIER, DIRECT) or (was_share and not previous_scheme):
+            doc.set("sales_team", [{"sales_person": doc.custom_primary_agent, "allocated_percentage": 100}])
+        return
     # Rebuild before core validation so its contribution validation always passes.
     doc.set("sales_team", [{"sales_person": doc.custom_primary_agent, "allocated_percentage": 100}])
 
@@ -60,6 +83,8 @@ def build_chain(seller):
                                     ["name", "parent_sales_person", "custom_tier", "enabled"], as_dict=True)
         if not agent or not agent.enabled:
             fail(f"Missing or disabled agent: {current}.")
+        if not uses_tier_commission(current):
+            fail(f"Enable Use Tier Commission on Sales Person {current} before using this commission chain.")
         if not agent.custom_tier:
             fail(f"Commission Tier is missing on Sales Person {current}.")
         tier = frappe.get_doc("Commission Tier", agent.custom_tier)
@@ -67,7 +92,7 @@ def build_chain(seller):
         if previous_level is not None and level != previous_level + 1:
             fail(f"Broken hierarchy at {current}: parent must be exactly one tier higher.")
         if not result:
-            rate = flt(tier.own_commission_percent)
+            rate = flt(tier.direct_sale_commission_percent)
         else:
             origin = result[0][2]
             rules = [r for r in tier.overrides if r.from_tier == origin]
@@ -91,20 +116,27 @@ def build_chain(seller):
 
 
 def calculate(doc, method=None):
+    if getattr(doc, "_action", None) == "update_after_submit":
+        return
     if not doc.get("custom_unlisted_shares"):
         return
-    if doc.get("custom_direct_sales_mandate"):
+    if doc.get("custom_commission_scheme") == MONTHLY:
+        return
+    if doc.get("custom_direct_sales_rate"):
         amount = flt(doc.base_net_total)
         if amount <= 0:
             fail("Share invoice net value must be greater than zero.")
+        # One row per agent up to the Sales Partner; incentives = their price margin.
+        from supremusangel.unlisted_shares.direct_ladder import invoice_rows, rate_from_invoice
+        rate = rate_from_invoice(doc)
         doc.set("sales_team", [{
-            "sales_person": doc.custom_primary_agent,
-            "allocated_percentage": 100,
-            "allocated_amount": amount,
+            "sales_person": person,
+            "allocated_percentage": 100 if index == 0 else 0,
+            "allocated_amount": amount if index == 0 else 0,
             "commission_rate": "0",
-            "incentives": flt(doc.get("custom_direct_sales_partner_earning"), 2),
-            "custom_commission_tier": frappe.db.get_value("Sales Person", doc.custom_primary_agent, "custom_tier"),
-        }])
+            "incentives": flt(earning, 2),
+            "custom_commission_tier": frappe.db.get_value("Sales Person", person, "custom_tier"),
+        } for index, (person, earning) in enumerate(invoice_rows(doc, rate))])
         return
     if method == "before_submit":
         from supremusangel.unlisted_shares.permissions import is_admin
@@ -146,6 +178,8 @@ def on_submit(doc, method=None):
 
 def protect_submitted(doc, method=None):
     old = doc.get_doc_before_save()
+    if old and old.get("custom_commission_scheme") != doc.get("custom_commission_scheme"):
+        frappe.throw("The commission scheme on a submitted invoice cannot be changed.")
     if old and old.get("custom_unlisted_shares"):
         fields = ("sales_person", "allocated_percentage", "commission_rate", "incentives", "custom_commission_tier")
         if [tuple(r.get(f) for f in fields) for r in old.sales_team] != [tuple(r.get(f) for f in fields) for r in doc.sales_team]:

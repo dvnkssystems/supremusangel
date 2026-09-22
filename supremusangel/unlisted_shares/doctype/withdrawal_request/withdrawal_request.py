@@ -20,7 +20,7 @@ class WithdrawalRequest(Document):
         frappe.db.sql("select name from `tabSales Person` where name=%s for update", self.sales_person)
         earned = frappe.db.sql("""select coalesce(sum(st.incentives),0) from `tabSales Team` st
             join `tabSales Invoice` si on si.name=st.parent and st.parenttype='Sales Invoice'
-            where si.docstatus=1 and si.custom_unlisted_shares=1 and si.company=%s and st.sales_person=%s""",
+            where si.docstatus=1 and si.custom_unlisted_shares=1 and coalesce(si.custom_commission_scheme, '') != 'Monthly Incentive' and si.company=%s and st.sales_person=%s""",
             (self.company, self.sales_person))[0][0]
         reserved = frappe.db.sql("""select coalesce(sum(amount),0) from `tabWithdrawal Request`
             where docstatus=1 and company=%s and sales_person=%s and name!=%s""",

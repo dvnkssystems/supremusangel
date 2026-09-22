@@ -7,6 +7,7 @@ from datetime import date
 import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
+from supremusangel.unlisted_shares.schemes import require_monthly_agent
 
 from supremusangel.supremus_angel.incentive_source import get_sales_rows, get_settings
 
@@ -18,6 +19,7 @@ class SAIncentiveCalculation(Document):
 
 	@frappe.whitelist()
 	def calculate(self):
+		require_monthly_agent(self.sales_person)
 		if not self.salary:
 			frappe.throw(frappe._("Please enter the monthly salary before calculating."))
 		if not self.calculation_month:

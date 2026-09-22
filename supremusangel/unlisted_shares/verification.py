@@ -9,7 +9,9 @@ from supremusangel.supremus_angel.incentive_source import get_sales_rows
 
 
 def verify_direct_sales_demo():
-    """Create/reuse a concrete direct-sales mandate and book one test invoice."""
+    """Create/reuse the demo deal's Direct Sales setup on Item Price and book test invoices."""
+    from supremusangel.unlisted_shares.direct_ladder import (DIRECT_SALES_LIST, deal_price_for,
+                                                             partner_access_for)
     original = frappe.session.user
     frappe.set_user("Administrator")
     partner = "SA Demo - Arjun Desai"
@@ -28,45 +30,23 @@ def verify_direct_sales_demo():
                 "custom_sales_person": partner,
             }).insert(ignore_permissions=True)
 
-        mandate_name = frappe.db.get_value("Direct Sales Mandate", {
-            "sales_partner": partner,
-            "deal": item,
-            "company": company,
-            "docstatus": ["!=", 2],
-        }, "name")
-        if mandate_name:
-            mandate = frappe.get_doc("Direct Sales Mandate", mandate_name)
-        else:
-            mandate = frappe.get_doc({
-                "doctype": "Direct Sales Mandate",
-                "sales_partner": partner,
-                "deal": item,
-                "company": company,
-                "mandate_date": "2026-07-01",
-                "reserved_quantity": 20000,
-            }).insert(ignore_permissions=True)
-        if mandate.docstatus == 0:
-            mandate.submit()
+        def ensure_deal_price(valid_from, company_price, low, high):
+            row = deal_price_for(item, valid_from)
+            if row and str(row.valid_from) == valid_from:
+                return row.name
+            return frappe.get_doc({"doctype": "Item Price", "price_list": DIRECT_SALES_LIST, "item_code": item,
+                                   "valid_from": valid_from, "price_list_rate": company_price,
+                                   "custom_minimum_selling_rate": low, "custom_maximum_selling_rate": high,
+                                   }).insert(ignore_permissions=True).name
 
-        revision_name = frappe.db.get_value("Direct Sales Rate Revision", {
-            "mandate": mandate.name,
-            "effective_date": "2026-07-01",
-            "docstatus": ["!=", 2],
-        }, "name")
-        if revision_name:
-            revision = frappe.get_doc("Direct Sales Rate Revision", revision_name)
-        else:
-            revision = frappe.get_doc({
-                "doctype": "Direct Sales Rate Revision",
-                "mandate": mandate.name,
-                "effective_date": "2026-07-01",
-                "company_settlement_rate": 11,
-                "minimum_selling_rate": 12,
-                "maximum_selling_rate": 15,
-                "reason": "Direct sales demo rate.",
-            }).insert(ignore_permissions=True)
-        if revision.docstatus == 0:
-            revision.submit()
+        july_price = ensure_deal_price("2026-07-01", 11, 12, 15)
+        september_price = ensure_deal_price("2026-09-01", 12, 13, 19)
+        access = partner_access_for(item, partner, "2026-07-01")
+        if not access:
+            frappe.get_doc({"doctype": "Item Price", "price_list": DIRECT_SALES_LIST, "item_code": item,
+                            "custom_sales_partner": partner, "custom_reserved_qty": 20000, "price_list_rate": 0,
+                            "valid_from": "2026-07-01"}).insert(ignore_permissions=True)
+            access = partner_access_for(item, partner, "2026-07-01")
 
         def make_invoice(remarks, posting_date, qty, rate):
             existing = frappe.db.get_value("Sales Invoice", {"remarks": remarks, "docstatus": 1}, "name")
@@ -77,10 +57,11 @@ def verify_direct_sales_demo():
                 "company": company,
                 "customer": customer,
                 "posting_date": posting_date,
+                "set_posting_time": 1,
                 "due_date": posting_date,
                 "debit_to": frappe.db.get_value("Company", company, "default_receivable_account"),
                 "custom_primary_agent": partner,
-                "custom_direct_sales_mandate": mandate.name,
+                "custom_direct_sales": 1,
                 "remarks": remarks,
                 "branch": frappe.db.get_value("Branch", {}, "name"),
                 "items": [{
@@ -96,55 +77,32 @@ def verify_direct_sales_demo():
             return apply_workflow(doc, "Approve")
 
         invoice = make_invoice("DIRECT-SALES-TEST-13", "2026-07-05", 10, 13)
-
-        mandate.reload()
         invoice.reload()
         assert invoice.docstatus == 1
-        assert invoice.custom_direct_sales_mandate == mandate.name
-        assert invoice.custom_direct_sales_rate_revision == revision.name
+        assert invoice.custom_direct_sales and invoice.custom_direct_sales_partner == partner
+        assert invoice.custom_direct_sales_rate == july_price
         assert flt(invoice.custom_company_settlement_rate) == 11
         assert flt(invoice.custom_direct_sales_partner_earning) == 20
         assert len(invoice.sales_team) == 1
         assert invoice.sales_team[0].sales_person == partner
         assert flt(invoice.sales_team[0].commission_rate) == 0
         assert flt(invoice.sales_team[0].incentives) == 20
-        assert flt(mandate.sold_quantity) >= 10
-        assert flt(mandate.remaining_quantity) <= 19990
-
-        september_name = frappe.db.get_value("Direct Sales Rate Revision", {
-            "mandate": mandate.name,
-            "effective_date": "2026-09-01",
-            "docstatus": ["!=", 2],
-        }, "name")
-        if september_name:
-            september_revision = frappe.get_doc("Direct Sales Rate Revision", september_name)
-        else:
-            september_revision = frappe.get_doc({
-                "doctype": "Direct Sales Rate Revision",
-                "mandate": mandate.name,
-                "effective_date": "2026-09-01",
-                "company_settlement_rate": 12,
-                "minimum_selling_rate": 13,
-                "maximum_selling_rate": 19,
-                "reason": "Direct sales September demo rate.",
-            }).insert(ignore_permissions=True)
-        if september_revision.docstatus == 0:
-            september_revision.submit()
 
         september_invoice = make_invoice("DIRECT-SALES-TEST-16-SEPT", today(), 5, 16)
         september_invoice.reload()
-        assert september_invoice.custom_direct_sales_rate_revision == september_revision.name
+        assert september_invoice.custom_direct_sales_rate == september_price
         assert flt(september_invoice.custom_company_settlement_rate) == 12
         assert flt(september_invoice.custom_direct_sales_partner_earning) == 20
 
+        sold, remaining = frappe.db.get_value("Item Price", access.name, ["custom_sold_qty", "custom_remaining_qty"])
+        assert flt(sold) >= 15 and flt(sold) + flt(remaining) == 20000
+
         if not frappe.db.exists("Sales Invoice", {"remarks": "DIRECT-SALES-TEST-CANCEL"}):
-            before_remaining = flt(frappe.db.get_value("Direct Sales Mandate", mandate.name, "remaining_quantity"))
+            before_remaining = flt(frappe.db.get_value("Item Price", access.name, "custom_remaining_qty"))
             cancel_invoice = make_invoice("DIRECT-SALES-TEST-CANCEL", today(), 3, 16)
-            after_submit_remaining = flt(frappe.db.get_value("Direct Sales Mandate", mandate.name, "remaining_quantity"))
-            assert after_submit_remaining == before_remaining - 3
+            assert flt(frappe.db.get_value("Item Price", access.name, "custom_remaining_qty")) == before_remaining - 3
             apply_workflow(cancel_invoice, "Cancel")
-            after_cancel_remaining = flt(frappe.db.get_value("Direct Sales Mandate", mandate.name, "remaining_quantity"))
-            assert after_cancel_remaining == before_remaining
+            assert flt(frappe.db.get_value("Item Price", access.name, "custom_remaining_qty")) == before_remaining
 
         bad_invoice = frappe.copy_doc(invoice)
         bad_invoice.docstatus = 0
@@ -161,7 +119,7 @@ def verify_direct_sales_demo():
             raise AssertionError("Direct Sales invoice accepted a rate above the allowed range.")
 
         columns, rows = run_report("direct_sales", {"from_date": "2026-07-01", "to_date": today(), "sales_person": partner})
-        assert columns and any(r.mandate == mandate.name and flt(r.partner_earning) >= 40 for r in rows)
+        assert columns and any(r.sales_partner == partner and r.deal == item and flt(r.agent_earning) >= 40 for r in rows)
         earned = frappe.db.sql("""select coalesce(sum(st.incentives),0) from `tabSales Team` st
             join `tabSales Invoice` si on si.name=st.parent and st.parenttype='Sales Invoice'
             where si.docstatus=1 and si.custom_unlisted_shares=1 and si.company=%s and st.sales_person=%s""",
@@ -169,8 +127,9 @@ def verify_direct_sales_demo():
         assert flt(earned) >= 40
 
         frappe.set_user("sa.teamlead@example.test")
-        own_mandates = frappe.get_list("Direct Sales Mandate", fields=["name", "sales_partner"], limit_page_length=100)
-        assert own_mandates and all(r.sales_partner == partner for r in own_mandates)
+        own_prices = frappe.get_list("Item Price", filters={"price_list": DIRECT_SALES_LIST}, fields=["name", "custom_agent"],
+                                     limit_page_length=100)
+        assert all(r.custom_agent == partner for r in own_prices)
         assert run_report("direct_sales", {"from_date": "2026-07-01", "to_date": today()})[1]
         try:
             run_report("direct_sales", {"from_date": "2026-07-01", "to_date": today(), "sales_person": "SA Demo - Associate 1.1.1"})
@@ -180,19 +139,19 @@ def verify_direct_sales_demo():
             raise AssertionError("Agent could view another agent's Direct Sales report.")
         frappe.set_user("Administrator")
 
-        mandate.reload()
+        sold, remaining = frappe.db.get_value("Item Price", access.name, ["custom_sold_qty", "custom_remaining_qty"])
         results.update({
-            "mandate": mandate.name,
-            "rate_revision": revision.name,
-            "september_rate_revision": september_revision.name,
+            "july_deal_price": july_price,
+            "september_deal_price": september_price,
+            "partner_access": access.name,
             "invoice": invoice.name,
             "september_invoice": september_invoice.name,
             "selling_rate": 13,
             "company_rate": 11,
             "qty": 15,
-            "partner_earning": flt(invoice.custom_direct_sales_partner_earning) + flt(september_invoice.custom_direct_sales_partner_earning),
-            "sold_quantity": mandate.sold_quantity,
-            "remaining_quantity": mandate.remaining_quantity,
+            "agent_earnings": flt(invoice.custom_direct_sales_partner_earning) + flt(september_invoice.custom_direct_sales_partner_earning),
+            "sold_quantity": sold,
+            "remaining_quantity": remaining,
         })
         print(frappe.as_json(results))
         return results

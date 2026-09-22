@@ -6,9 +6,10 @@
   "modified": "2026-09-09 08:57:19.322481",
   "name": "Associate",
   "overrides": [],
-  "own_commission_percent": 20.0,
+  "own_commission_percent": 20,
   "promotion_criteria": "Administrator promotion after review of team performance.",
-  "tier_name": "Associate"
+  "tier_name": "Associate",
+  "direct_sale_commission_percent": 20
  },
  {
   "docstatus": 0,
@@ -25,9 +26,10 @@
     "percent": 5.0
    }
   ],
-  "own_commission_percent": 20.0,
+  "own_commission_percent": 5,
   "promotion_criteria": "Administrator promotion after review of team performance.",
-  "tier_name": "Sr. Associate"
+  "tier_name": "Sr. Associate",
+  "direct_sale_commission_percent": 25
  },
  {
   "docstatus": 0,
@@ -41,7 +43,7 @@
     "parent": "Team Lead",
     "parentfield": "overrides",
     "parenttype": "Commission Tier",
-    "percent": 5.0
+    "percent": 3.0
    },
    {
     "from_tier": "Associate",
@@ -51,9 +53,10 @@
     "percent": 3.0
    }
   ],
-  "own_commission_percent": 20.0,
+  "own_commission_percent": 3,
   "promotion_criteria": "Administrator promotion after review of team performance.",
-  "tier_name": "Team Lead"
+  "tier_name": "Team Lead",
+  "direct_sale_commission_percent": 28
  },
  {
   "docstatus": 0,
@@ -67,14 +70,14 @@
     "parent": "City Partner",
     "parentfield": "overrides",
     "parenttype": "Commission Tier",
-    "percent": 5.0
+    "percent": 2.0
    },
    {
     "from_tier": "Sr. Associate",
     "parent": "City Partner",
     "parentfield": "overrides",
     "parenttype": "Commission Tier",
-    "percent": 3.0
+    "percent": 2.0
    },
    {
     "from_tier": "Associate",
@@ -84,8 +87,9 @@
     "percent": 2.0
    }
   ],
-  "own_commission_percent": 20.0,
+  "own_commission_percent": 2,
   "promotion_criteria": "Administrator promotion after review of team performance.",
-  "tier_name": "City Partner"
+  "tier_name": "City Partner",
+  "direct_sale_commission_percent": 30
  }
 ]
