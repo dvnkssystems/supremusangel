@@ -61,7 +61,7 @@ def verify_direct_sales_demo():
                 "due_date": posting_date,
                 "debit_to": frappe.db.get_value("Company", company, "default_receivable_account"),
                 "custom_primary_agent": partner,
-                "custom_direct_sales": 1,
+                "custom_is_direct": 1,
                 "remarks": remarks,
                 "branch": frappe.db.get_value("Branch", {}, "name"),
                 "items": [{
@@ -79,7 +79,7 @@ def verify_direct_sales_demo():
         invoice = make_invoice("DIRECT-SALES-TEST-13", "2026-07-05", 10, 13)
         invoice.reload()
         assert invoice.docstatus == 1
-        assert invoice.custom_direct_sales and invoice.custom_direct_sales_partner == partner
+        assert invoice.custom_is_direct and invoice.custom_direct_sales_partner == partner
         assert invoice.custom_direct_sales_rate == july_price
         assert flt(invoice.custom_company_settlement_rate) == 11
         assert flt(invoice.custom_direct_sales_partner_earning) == 20

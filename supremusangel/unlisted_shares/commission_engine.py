@@ -51,14 +51,14 @@ def prepare(doc, method=None):
         frappe.throw("Agents can create transactions only for themselves.", frappe.PermissionError)
     # Direct Sales (price ladder) runs only when ticked; otherwise drop any stale
     # rate details so the invoice falls through to Tier / Monthly commission.
-    if not doc.get("custom_direct_sales"):
+    if not doc.get("custom_is_direct"):
         doc.custom_direct_sales_partner = None
         doc.custom_direct_sales_rate = None
         doc.custom_direct_sales_mandate = None
         doc.custom_direct_sales_rate_revision = None
         doc.custom_company_settlement_rate = 0
         doc.custom_direct_sales_partner_earning = 0
-    if doc.get("custom_direct_sales"):
+    if doc.get("custom_is_direct"):
         doc.custom_commission_scheme = DIRECT
     elif uses_tier_commission(doc.custom_primary_agent):
         doc.custom_commission_scheme = TIER

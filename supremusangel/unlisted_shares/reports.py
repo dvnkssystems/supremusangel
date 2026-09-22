@@ -140,11 +140,11 @@ def direct_sales(f):
         booked = sql("""select count(distinct si.name) invoices, coalesce(sum(sii.qty),0) qty,
             coalesce(sum(sii.base_net_amount),0) sales_value
             from `tabSales Invoice` si join `tabSales Invoice Item` sii on sii.parent=si.name
-            where si.docstatus=1 and si.custom_direct_sales=1 and si.custom_direct_sales_partner=%(partner)s
+            where si.docstatus=1 and si.custom_is_direct=1 and si.custom_direct_sales_partner=%(partner)s
               and sii.item_code=%(deal)s and si.posting_date between %(from_date)s and %(to_date)s""",
             dict(f, partner=partner, deal=deal))[0]
         earned = flt(sql("""select coalesce(sum(si.custom_direct_sales_partner_earning),0) earned from `tabSales Invoice` si
-            where si.docstatus=1 and si.custom_direct_sales=1 and si.custom_direct_sales_partner=%(partner)s
+            where si.docstatus=1 and si.custom_is_direct=1 and si.custom_direct_sales_partner=%(partner)s
               and si.posting_date between %(from_date)s and %(to_date)s
               and exists(select 1 from `tabSales Invoice Item` sii where sii.parent=si.name and sii.item_code=%(deal)s)""",
             dict(f, partner=partner, deal=deal))[0].earned)
@@ -187,7 +187,7 @@ def direct_commission(f):
         sum(case when st.sales_person=si.custom_primary_agent then si.base_net_total else 0 end) own_sales,
         sum(case when st.sales_person=si.custom_primary_agent then st.incentives else 0 end) own_margin,
         sum(case when st.sales_person!=si.custom_primary_agent then st.incentives else 0 end) downline_margin,
-        sum(st.incentives) total """ + BASE + """ and si.custom_direct_sales=1""" + extra + """
+        sum(st.incentives) total """ + BASE + """ and si.custom_is_direct=1""" + extra + """
         group by st.sales_person order by total desc""", f)
     return [AGENT, TIER, col("Invoices", "invoices", "Int", width=90),
             col("Shares Sold (Own)", "own_qty", "Float", width=130), col("Own Sales Value", "own_sales"),

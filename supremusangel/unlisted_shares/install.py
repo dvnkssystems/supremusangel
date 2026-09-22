@@ -29,8 +29,6 @@ def setup():
                                 options="\nMonthly Incentive\nTier Commission\nDirect Sales"),
                           field("custom_unlisted_shares", "Unlisted Shares", "Check", read_only=1, default="0"),
                           field("custom_primary_agent", "Primary Agent", options="Sales Person"),
-                          field("custom_direct_sales", "Direct Sales", "Check", default="0", insert_after="custom_primary_agent",
-                                description="Price the sale through the Direct Sales Mandate ladder (rate minus each agent's buy price) instead of Tier Commission."),
                           field("custom_pending_since", "Pending Since", "Datetime", read_only=1),
                           field("custom_direct_sales_mandate", "Direct Sales Mandate", options="Direct Sales Mandate"),
                           field("custom_direct_sales_rate_revision", "Direct Sales Rate Revision", options="Direct Sales Rate Revision", read_only=1),
@@ -64,9 +62,10 @@ def setup():
     setup_direct_sales_fields()
     setup_direct_sales_price_list()
     add_columns_to_item_price_list_view()
-    # Invoices booked against a mandate before the Direct Sales checkbox existed.
-    frappe.db.sql("""update `tabSales Invoice` set custom_direct_sales = 1
-        where ifnull(custom_direct_sales_mandate, '') != '' and custom_direct_sales = 0""")
+    # Invoices booked against a mandate, or ticked on the retired Direct Sales checkbox,
+    # before Is Direct Plan drove direct sales.
+    frappe.db.sql("""update `tabSales Invoice` set custom_is_direct = 1
+        where custom_is_direct = 0 and (custom_direct_sales = 1 or ifnull(custom_direct_sales_mandate, '') != '')""")
     migrate_mandates_to_item_price()
     split_rate_rows_into_deal_prices()
     # The direct sales scheme was renamed from "Direct Sales Mandate" to "Direct Sales".
@@ -117,12 +116,16 @@ DIRECT_SALES_FIELDS = {
     "Sales Invoice": [
         field("custom_commission_scheme", "Commission Scheme", "Select", read_only=1,
               options="\nMonthly Incentive\nTier Commission\nDirect Sales"),
-        field("custom_direct_sales", "Direct Sales", "Check", default="0", insert_after="custom_primary_agent",
+        # Same fieldname as the Sales Order's Is Direct Plan (customer_portal), so ERPNext
+        # copies it onto the invoice made from the order.
+        field("custom_is_direct", "Is Direct Plan", "Check", default="0", insert_after="custom_primary_agent",
               description="Price the sale through the direct sales ladder (rate minus each agent's buy price) instead of Tier Commission."),
         field("custom_direct_sales_partner", "Direct Sales Partner", options="Sales Person", read_only=1,
-              insert_after="custom_direct_sales", depends_on="custom_direct_sales"),
+              insert_after="custom_is_direct", depends_on="custom_is_direct"),
         field("custom_direct_sales_rate", "Direct Sales Price", options="Item Price", read_only=1,
-              insert_after="custom_direct_sales_partner", depends_on="custom_direct_sales"),
+              insert_after="custom_direct_sales_partner", depends_on="custom_is_direct"),
+        # Retired: replaced by Is Direct Plan; kept hidden so old values survive the migration.
+        field("custom_direct_sales", "Direct Sales (old)", "Check", default="0", hidden=1, read_only=1),
         field("custom_company_settlement_rate", "Company Price / Share", "Currency", read_only=1),
         # Retired: kept read-only for invoices booked under the old mandate doctypes.
         field("custom_direct_sales_mandate", "Direct Sales Mandate (old)", options="Direct Sales Mandate",
@@ -141,6 +144,9 @@ def setup_direct_sales_fields():
     # Sales Partner and the price range; always open the full form instead.
     from frappe.custom.doctype.property_setter.property_setter import make_property_setter
     make_property_setter("Item Price", None, "quick_entry", 0, "Check", for_doctype=True, validate_fields_for_doctype=False)
+    # customer_portal makes the Sales Order's Is Direct Plan read-only (set by the investor
+    # portal); let Desk users tick it too so their orders carry into Direct Sales invoices.
+    make_property_setter("Sales Order", "custom_is_direct", "read_only", 0, "Check", validate_fields_for_doctype=False)
 
 
 def setup_direct_sales_price_list():

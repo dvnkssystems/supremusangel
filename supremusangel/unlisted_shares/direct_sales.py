@@ -17,8 +17,8 @@ from supremusangel.unlisted_shares.direct_ladder import (
 
 
 def validate_invoice(doc, method=None):
-    # Direct sales pricing runs only when the invoice is ticked as Direct Sales.
-    if not doc.get("custom_unlisted_shares") or doc.is_return or not doc.get("custom_direct_sales"):
+    # Direct sales pricing runs only when the invoice is ticked Is Direct Plan.
+    if not doc.get("custom_unlisted_shares") or doc.is_return or not doc.get("custom_is_direct"):
         return
 
     items = get_share_items(doc)
@@ -28,11 +28,11 @@ def validate_invoice(doc, method=None):
 
     if not deal_price_for(item_code, doc.posting_date):
         frappe.throw(f"{item_code} has no direct sales price on this date. "
-                     "Untick Direct Sales to use Tier Commission instead.")
+                     "Untick Is Direct Plan to use Tier Commission instead.")
     rate = get_rate(item_code, doc.custom_primary_agent, doc.posting_date)
     if not rate:
         frappe.throw(f"No Sales Partner at or above {doc.custom_primary_agent} may sell {item_code}. "
-                     "Untick Direct Sales to use Tier Commission instead.")
+                     "Untick Is Direct Plan to use Tier Commission instead.")
 
     qty = sum(flt(row.qty) for row in items)
     if qty <= 0:
@@ -66,7 +66,7 @@ def on_cancel_invoice(doc, method=None):
 
 
 def sync_from_invoice(doc):
-    if doc.get("custom_direct_sales") and doc.get("custom_direct_sales_partner"):
+    if doc.get("custom_is_direct") and doc.get("custom_direct_sales_partner"):
         for item_code in {row.item_code for row in get_share_items(doc)}:
             sync_sold_quantity(item_code, doc.custom_direct_sales_partner)
 
