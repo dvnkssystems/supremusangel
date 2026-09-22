@@ -11,6 +11,7 @@
 # each member's SA Incentive Calculation) is already in place.
 
 import frappe
+from supremusangel.unlisted_shares.schemes import uses_tier_commission
 from frappe.utils import add_months, flt, get_first_day, getdate, nowdate
 
 from supremusangel.supremus_angel.incentive_source import get_monthly_salary
@@ -78,6 +79,8 @@ def run_monthly_incentives(month=None):
 	# Collect (scheme, sales_person, employee) for every eligible person.
 	targets = []
 	for sp in frappe.get_all("Sales Person", filters={"enabled": 1}, fields=["name", "employee"]):
+		if uses_tier_commission(sp.name):
+			continue
 		if not sp.employee:
 			continue
 		emp = frappe.db.get_value(

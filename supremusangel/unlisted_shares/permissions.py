@@ -35,7 +35,7 @@ def query(doctype, user=None):
         )
     field = {"Sales Invoice": "custom_primary_agent", "Customer": "custom_sales_person",
              "Payment Entry": "custom_sales_person", "Withdrawal Request": "sales_person",
-             "Direct Sales Mandate": "sales_partner"}[doctype]
+             "Direct Sales Mandate": "sales_partner", "Item Price": "custom_agent"}[doctype]
     return f"`tab{doctype}`.`{field}` = {agent}"
 
 
@@ -46,6 +46,7 @@ def payment_query(user=None): return query("Payment Entry", user)
 def withdrawal_query(user=None): return query("Withdrawal Request", user)
 def direct_sales_mandate_query(user=None): return query("Direct Sales Mandate", user)
 def direct_sales_rate_revision_query(user=None): return query("Direct Sales Rate Revision", user)
+def item_price_query(user=None): return query("Item Price", user)
 
 
 def has_permission(doc, user=None, permission_type=None):
@@ -59,5 +60,5 @@ def has_permission(doc, user=None, permission_type=None):
         return frappe.db.get_value("Direct Sales Mandate", doc.mandate, "sales_partner") == agent
     field = {"Sales Invoice": "custom_primary_agent", "Customer": "custom_sales_person",
              "Payment Entry": "custom_sales_person", "Withdrawal Request": "sales_person",
-             "Direct Sales Mandate": "sales_partner"}.get(doc.doctype)
+             "Direct Sales Mandate": "sales_partner", "Item Price": "custom_agent"}.get(doc.doctype)
     return (doc.name if doc.doctype == "Sales Person" else doc.get(field)) == agent

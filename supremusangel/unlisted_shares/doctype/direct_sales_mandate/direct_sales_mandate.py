@@ -4,6 +4,11 @@ from frappe.utils import flt
 
 
 class DirectSalesMandate(Document):
+    def before_insert(self):
+        # Retired: direct sales rates now live on Item Price (Direct Sales price list).
+        frappe.throw("Direct Sales Mandate is retired. Add or change direct sales rates on Item Price, "
+                     "Direct Sales price list (set Sales Partner and the rates).")
+
     def validate(self):
         if flt(self.reserved_quantity) <= 0:
             frappe.throw("Reserved Quantity must be greater than zero.")
