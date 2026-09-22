@@ -91,6 +91,7 @@ def _configure_settings():
 		"target_multiple": 10,
 		"minimum_multiple": 7,
 		"team_commission_percent": 1,
+		"team_commission_overachieved_percent": 1,
 		"team_commission_min_achievement": 70,
 		"branch_commission_min_achievement": 70,
 		"branch_commission_on_target_percent": 0.5,
