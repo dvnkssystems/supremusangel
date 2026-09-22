@@ -136,7 +136,10 @@ def get_group_commission(full_target, sales, min_achievement, on_target_percent,
 		return 0.0, 0.0, achievement
 
 	if achievement > 100:
-		rate = flt(overachieved_percent)
+		# A blank overachieved rate (e.g. a site whose settings predate the field)
+		# must not zero the commission of a team that beat its target -- fall back
+		# to the on-target rate.
+		rate = flt(overachieved_percent) or flt(on_target_percent)
 		return sales * rate / 100, rate, achievement
 
 	rate = flt(on_target_percent)
