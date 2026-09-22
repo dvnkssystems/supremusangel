@@ -16,6 +16,7 @@ from datetime import date
 
 import frappe
 from frappe.utils import flt
+from supremusangel.unlisted_shares.schemes import monthly_invoice_condition
 
 
 def month_range(month):
@@ -149,7 +150,7 @@ def get_sales_rows(sales_person, from_date, to_date):
 		return []
 
 	rows = frappe.db.sql(
-		"""
+		f"""
 		SELECT si.name AS sales_invoice,
 		       si.posting_date,
 		       si.customer,
@@ -161,7 +162,7 @@ def get_sales_rows(sales_person, from_date, to_date):
 		WHERE st.parenttype = 'Sales Invoice'
 		  AND st.sales_person = %(sp)s
 		  AND si.docstatus = 1
-		  AND coalesce(si.custom_unlisted_shares, 0) = 0
+		  AND {monthly_invoice_condition()}
 		  AND si.posting_date BETWEEN %(fd)s AND %(td)s
 		ORDER BY si.posting_date ASC
 		""",
@@ -170,7 +171,7 @@ def get_sales_rows(sales_person, from_date, to_date):
 	)
 
 	for r in rows:
-		pct = flt(r.allocated_percentage) or 100
+		pct = 100 if r.allocated_percentage is None else flt(r.allocated_percentage)
 		base = flt(r.net_total) or flt(r.grand_total)
 		r.allocated_percentage = pct
 		r.credited_amount = base * pct / 100

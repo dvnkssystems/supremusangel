@@ -796,5 +796,26 @@
   "translatable": 0,
   "unique": 0,
   "width": null
+ },
+ {
+  "doctype": "Custom Field",
+  "dt": "Sales Person",
+  "fieldname": "custom_use_tier_commission",
+  "name": "Sales Person-custom_use_tier_commission",
+  "label": "Use Tier Commission",
+  "fieldtype": "Check",
+  "default": "0",
+  "insert_after": "commission_rate",
+  "description": "Enable the 30% tier commission scheme for this agent. Leave unchecked for existing monthly incentives."
+ },
+ {
+  "doctype": "Custom Field",
+  "dt": "Sales Invoice",
+  "fieldname": "custom_commission_scheme",
+  "name": "Sales Invoice-custom_commission_scheme",
+  "label": "Commission Scheme",
+  "fieldtype": "Select",
+  "read_only": 1,
+  "options": "\nMonthly Incentive\nTier Commission\nDirect Sales"
  }
 ]

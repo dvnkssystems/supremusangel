@@ -4,6 +4,11 @@ from frappe.utils import flt
 
 
 class DirectSalesRateRevision(Document):
+    def before_insert(self):
+        # Retired: direct sales rates now live on Item Price (Direct Sales price list).
+        frappe.throw("Direct Sales Rate Revision is retired. Add or change direct sales rates on Item Price, "
+                     "Direct Sales price list (set Sales Partner and the rates).")
+
     def validate(self):
         if flt(self.company_settlement_rate) <= 0:
             frappe.throw("Company Settlement Rate must be greater than zero.")
@@ -29,6 +34,8 @@ class DirectSalesRateRevision(Document):
             "item_code": mandate.deal,
             "selling": 1,
             "valid_from": self.effective_date,
+            # Agents' downline prices share this price list; only touch the base row.
+            "custom_agent": ["is", "not set"],
         }
         name = frappe.db.get_value("Item Price", filters, "name")
         values = {

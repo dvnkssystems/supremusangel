@@ -48,6 +48,46 @@ Tier-wise business counts direct business once, shows earned commission separate
 
 The Supremus Angel workspace includes the required shortcuts, four number cards, weekly transaction value chart, and report links. Existing salary-incentive links remain below the share module. Total Customers counts customers with a default Sales Person, including pre-existing customers.
 
+## Direct Sales price ladder
+
+Ticking **Direct Sales** on a share invoice replaces Tier Commission with a price ladder. When the box is unticked, the direct sales fields are cleared and the invoice uses Tier Commission or Monthly Incentive as before.
+
+**All configuration is on Item Price, in the "Direct Sales" price list.** There are three kinds of row:
+
+| Row | Agent / Sales Partner | Holds |
+|---|---|---|
+| **Deal price**, one per deal and date | both empty | **Company Price / Share** (the Rate field), Minimum and Maximum Selling Rate, Valid From |
+| **Partner access**, one per partner and deal | **Sales Partner** | Reserved Qty (Sold and Remaining are read-only) |
+| **Agent price** | **Agent** | Rate = the price this agent charges the people directly under them |
+
+- **The deal price:** the price rules for the deal, and the same for every partner. The latest Valid From in force on the invoice date wins; a later Valid From is a price change, and older rows are the history. The partner buys at the company price.
+- **Partner access:** lets the Sales Partner and everyone below them sell the deal. For a sale, the system uses the nearest partner at or above the seller that has access.
+- **The quota:** Reserved Qty on the partner access row is the partner's share quota. Sold counts approved Direct Sales invoices for that partner and deal (`custom_direct_sales_partner`). Selling past the quota is blocked.
+- **Agent prices:** each agent below the partner buys at their parent's agent-row price. If the parent has none, they pass it on at cost and earn a margin of 0.
+- **Margins:** each agent earns (price the next agent down paid, or the invoice rate) − own buy price, multiplied by qty. A missing tier is skipped, so the seller keeps the gap. With settlement 30 and agent prices 32 / 35 / 38, 2 shares sold at 45 split 14 / 6 / 6 / 4.
+- **Where earnings are stored:** margins are written to the standard Sales Team `incentives`. The seller has 100% contribution and ancestors 0%, so reports and Withdrawal Requests read them with no extra work. Each invoice records `custom_direct_sales_partner`, `custom_direct_sales_rate` (the deal price row), the company price at the time (`custom_company_settlement_rate`), and `custom_direct_sales_partner_earning`, which is the total across all agents.
+- **Price limits:** a customer rate must be between the minimum and maximum selling rate. An agent's price must be between their own buy price and the maximum. Both are checked on save.
+- **Price changes:** saving a deal price that is in force lists agent prices that no longer fit. A sale through a stale upline price is blocked until that price is updated.
+- **Duplicate check:** `AgentItemPrice` overrides the Item Price class so the duplicate check is scoped by row kind: deal prices per date, each partner's access, each agent's price.
+- **Setting agent prices:** agents use the **Direct Sales Prices** button on their Sales Person form, or the Item Price screen. There they see only their own rows (`permissions.item_price_query`), can't touch deal prices, partner access or other agents' rows (`validate_item_price`), and can't delete. The workspace shortcut **Direct Sales Rates** opens the list.
+- **Retired:** **Direct Sales Mandate** and **Direct Sales Rate Revision** refuse new records. Existing records were copied once into deal prices, partner access and agent prices (`install.migrate_mandates_to_item_price`). Sites that had the earlier per-partner rate rows are converted by `install.split_rate_rows_into_deal_prices`. Both run once, guarded by site defaults. Their price lists were switched off. Old invoices keep their read-only mandate and revision links.
+
+Code:
+- `direct_ladder.py`: chain, pricing, stale-price checks, `AgentItemPrice`, endpoints
+- `direct_sales.py`: invoice checks, quota and sold-quantity sync
+- `commission_engine.py`: scheme routing and the Sales Team ledger
+- `public/js/sales_person.js`: the price dialog
+- `public/js/item_price.js`: agent defaults and pickers on Item Price
+
+Tests are in `test_direct_ladder.py` and `test_schemes.py`.
+
+**Running tests.** Always pass `--skip-before-tests --skip-test-records`. Without them, ERPNext's `before_tests` hook runs `delete from tabItem Price` on the site and commits, which wipes every price, including mandate price lists.
+
+```sh
+bench --site SITE run-tests --skip-before-tests --skip-test-records --module supremusangel.unlisted_shares.test_direct_ladder
+bench --site SITE run-tests --skip-before-tests --skip-test-records --module supremusangel.unlisted_shares.test_schemes
+```
+
 ## Setup and verification
 
 For the already-installed app:

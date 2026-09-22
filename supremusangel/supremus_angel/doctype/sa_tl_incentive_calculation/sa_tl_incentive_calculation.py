@@ -7,6 +7,7 @@ from datetime import date
 import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
+from supremusangel.unlisted_shares.schemes import require_monthly_agent, uses_tier_commission
 
 from supremusangel.supremus_angel.incentive_source import (
 	get_group_commission,
@@ -23,6 +24,7 @@ class SATLIncentiveCalculation(Document):
 
 	@frappe.whitelist()
 	def calculate(self):
+		require_monthly_agent(self.team_lead)
 		if not self.salary:
 			frappe.throw(frappe._("Please enter the TL monthly salary before calculating."))
 		if not self.calculation_month:
@@ -202,7 +204,7 @@ class SATLIncentiveCalculation(Document):
 			filters={"lft": [">", tl.lft], "rgt": ["<", tl.rgt]},
 			pluck="name",
 		)
-		return members
+		return [member for member in members if not uses_tier_commission(member)]
 
 	# -------------------------------------------------------------------- shared
 

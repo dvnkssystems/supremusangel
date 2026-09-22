@@ -37,6 +37,9 @@ def seed():
                 name = f"SA Demo - Associate {t+1}.{s+1}.{a+1}"
                 person = ensure("Sales Person", name, dict(sales_person_name=name, parent_sales_person=senior.name, is_group=0, custom_tier="Associate"))
                 associates.append(person.name)
+    # Demo agents earn through Tier Commission, which each agent must opt into.
+    for person in [city.name] + leads + seniors + associates:
+        frappe.db.set_value("Sales Person", person, "custom_use_tier_commission", 1)
     for email, person, first in [("sa.associate@example.test", associates[0], "Demo Associate"),
                                   ("sa.teamlead@example.test", leads[0], "Demo Team Lead"),
                                   ("sa.admin@example.test", None, "Demo Share Admin")]:
