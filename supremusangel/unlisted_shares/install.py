@@ -529,7 +529,13 @@ AGENT_PROFILE_STYLE = """.agent-profile { padding: 16px 20px; border: 1px solid 
 .ladder span.me { color: var(--blue-700); border-color: var(--blue-400); font-weight: 600; }
 .facts { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); }
 .facts b { display: block; font-size: 15px; color: var(--text-color); }"""
-AGENT_PROFILE_SCRIPT = """frappe.call("supremusangel.unlisted_shares.permissions.get_agent_profile").then(({ message: p }) => {
+AGENT_PROFILE_SCRIPT = """// The blocks show the signed-in agent's own figures; admins opening the desk get a note.
+const roles = frappe.user_roles || [];
+const is_agent = roles.includes("Agent") && !roles.includes("System Manager") && !roles.includes("Admin");
+if (!is_agent) {
+  root_element.querySelector(".name").textContent = __("Agent Desk");
+  root_element.querySelector(".facts").textContent = __("Each agent sees their own name, tier, upline and team here. Log in as an agent to see it.");
+} else frappe.call("supremusangel.unlisted_shares.permissions.get_agent_profile").then(({ message: p }) => {
   if (!p) return;
   const $ = (s) => root_element.querySelector(s);
   $(".name").textContent = p.name;
@@ -560,8 +566,13 @@ th:first-child, td:first-child { text-align: left; }
 th { font-weight: 500; color: var(--text-muted); }
 td.none { color: var(--text-muted); }
 .empty { font-size: 13px; color: var(--text-muted); }"""
-AGENT_PRICES_SCRIPT = """frappe.call("supremusangel.unlisted_shares.direct_ladder.get_downline_prices").then(({ message: d }) => {
-  const rows = root_element.querySelector(".rows");
+AGENT_PRICES_SCRIPT = """// The blocks show the signed-in agent's own figures; admins opening the desk get a note.
+const roles = frappe.user_roles || [];
+const is_agent = roles.includes("Agent") && !roles.includes("System Manager") && !roles.includes("Admin");
+const rows = root_element.querySelector(".rows");
+if (!is_agent) {
+  rows.innerHTML = `<div class="empty">${__("Each agent sees their own buy prices here. Log in as an agent to see them.")}</div>`;
+} else frappe.call("supremusangel.unlisted_shares.direct_ladder.get_downline_prices").then(({ message: d }) => {
   if (!d || !d.deals.length) {
     rows.innerHTML = `<div class="empty">${__("No deal is open to you yet.")}</div>`;
     return;
