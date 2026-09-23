@@ -241,6 +241,9 @@ def validate_item_price(doc, method=None):
         frappe.throw("You can only set your own downline price.", frappe.PermissionError)
     if doc.get("custom_agent") and doc.get("custom_sales_partner"):
         fail("Set either Agent (an agent's downline price) or Sales Partner (who may sell the deal), not both.")
+    for label, person in (("Agent", doc.get("custom_agent")), ("Sales Partner", doc.get("custom_sales_partner"))):
+        if person and not frappe.db.get_value("Sales Person", person, "custom_tier"):
+            fail(f"{label} {person} is not an agent: give them a Commission Tier first.")
     if doc.price_list != DIRECT_SALES_LIST:
         if doc.get("custom_agent") or doc.get("custom_sales_partner"):
             fail(f"Agent prices and Sales Partner access belong in the {DIRECT_SALES_LIST} price list.")
@@ -339,6 +342,16 @@ def _resolve_agent(sales_person=None):
     if sales_person and sales_person != agent:
         frappe.throw("You can only manage your own prices.", frappe.PermissionError)
     return agent
+
+
+@frappe.whitelist()
+def get_deal_price(item_code):
+    """The deal price in force today: what a Sales Partner buys at, shown on their access row."""
+    frappe.has_permission("Item Price", "read", throw=True)
+    price = deal_price_for(item_code)
+    return price and {"company_price": price.price_list_rate, "valid_from": price.valid_from,
+                      "minimum_selling_rate": price.custom_minimum_selling_rate,
+                      "maximum_selling_rate": price.custom_maximum_selling_rate}
 
 
 @frappe.whitelist()

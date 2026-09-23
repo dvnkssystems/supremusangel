@@ -1,0 +1,163 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"agent_profile\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Agent Profile\", \"col\": 12}}, {\"id\": \"agent_card_sa_total_transactions\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Transactions\", \"col\": 4}}, {\"id\": \"agent_card_sa_total_customers\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Customers\", \"col\": 4}}, {\"id\": \"agent_card_sa_active_deals\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Deals\", \"col\": 4}}, {\"id\": \"agent_shortcut_my_team\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"My Team\", \"col\": 4}}, {\"id\": \"agent_shortcut_my_customers\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"My Customers\", \"col\": 4}}, {\"id\": \"agent_shortcut_new_customer\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"New Customer\", \"col\": 4}}, {\"id\": \"agent_shortcut_deals\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Deals\", \"col\": 4}}, {\"id\": \"agent_shortcut_item_price\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Item Price\", \"col\": 4}}, {\"id\": \"agent_shortcut_my_transactions\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"My Transactions\", \"col\": 4}}, {\"id\": \"agent_shortcut_my_withdrawal_requests\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"My Withdrawal Requests\", \"col\": 4}}, {\"id\": \"agent_prices\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Agent Prices\", \"col\": 12}}, {\"id\": \"agent_reports\", \"type\": \"card\", \"data\": {\"card_name\": \"My Reports\", \"col\": 6}}]",
+ "creation": "2026-09-23 15:48:52.733704",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Agent Profile",
+   "label": "Agent Profile"
+  },
+  {
+   "custom_block_name": "Agent Prices",
+   "label": "Agent Prices"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "users",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Agent Desk",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "My Reports",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "My Sales and Commission",
+   "link_count": 0,
+   "link_to": "My Sales and Commission",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "My Downline Performance",
+   "link_count": 0,
+   "link_to": "My Downline Performance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "My Withdrawal History",
+   "link_count": 0,
+   "link_to": "My Withdrawal History",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Direct Sales Commission",
+   "link_count": 0,
+   "link_to": "Direct Sales Commission",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Direct Sales Partner Summary",
+   "link_count": 0,
+   "link_to": "Direct Sales Partner Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-23 16:04:08.694174",
+ "modified_by": "Administrator",
+ "module": "Unlisted Shares",
+ "name": "Agent Desk",
+ "number_cards": [
+  {
+   "label": "Total Transactions",
+   "number_card_name": "SA Total Transactions"
+  },
+  {
+   "label": "Total Customers",
+   "number_card_name": "SA Total Customers"
+  },
+  {
+   "label": "Active Deals",
+   "number_card_name": "SA Active Deals"
+  }
+ ],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Agent"
+  }
+ ],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "Tree",
+   "label": "My Team",
+   "link_to": "Sales Person",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "My Customers",
+   "link_to": "Customer",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "New",
+   "label": "New Customer",
+   "link_to": "Customer",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Deals",
+   "link_to": "Item",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Item Price",
+   "link_to": "Item Price",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "My Transactions",
+   "link_to": "Sales Invoice",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "My Withdrawal Requests",
+   "link_to": "Withdrawal Request",
+   "type": "DocType"
+  }
+ ],
+ "title": "Agent Desk"
+}

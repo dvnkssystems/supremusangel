@@ -30,6 +30,7 @@ app_include_js = [
     "/assets/supremusangel/js/policy_ack.bundle.js",
     "/assets/supremusangel/js/shortcut_single_fix.bundle.js",
     "/assets/supremusangel/js/notification_sound.bundle.js",
+    "/assets/supremusangel/js/agent_home.bundle.js",
 ]
 
 # Web Routes
@@ -377,6 +378,12 @@ doc_events["Sales Invoice"].update({
 doc_events["Sales Invoice"]["on_cancel"].append("supremusangel.unlisted_shares.direct_sales.on_cancel_invoice")
 doc_events["Item Price"] = {"validate": "supremusangel.unlisted_shares.direct_ladder.validate_item_price",
                             "on_update": "supremusangel.unlisted_shares.direct_ladder.on_update_item_price"}
+doc_events["Customer"] = {"before_validate": "supremusangel.unlisted_shares.permissions.assign_customer"}
+override_whitelisted_methods = {"frappe.desk.treeview.get_children": "supremusangel.unlisted_shares.permissions.get_tree_children"}
+# Agents add downline members below themselves; linking a login to any Sales Person in the
+# tree gives it the Agent role and the Agent Desk.
+doc_events["Sales Person"] = {"before_validate": "supremusangel.unlisted_shares.permissions.prepare_downline_member",
+                              "on_update": "supremusangel.unlisted_shares.install.on_sales_person_update"}
 for _dt, _function in {"Sales Invoice": "invoice", "Customer": "customer", "Sales Person": "person",
                        "Payment Entry": "payment", "Withdrawal Request": "withdrawal",
                        "Direct Sales Mandate": "direct_sales_mandate",

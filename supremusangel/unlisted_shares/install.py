@@ -74,6 +74,7 @@ def setup():
     setup_permissions()
     setup_workflows()
     setup_dashboard()
+    setup_agent_desk()
 
 
 # Direct sales are configured on Item Price in the "Direct Sales" price list, as three kinds
@@ -312,10 +313,12 @@ def setup_permissions():
             rights = ["read", "report", "print"]
             if role == "Admin":
                 rights += ["write", "create", "submit", "cancel", "amend", "export"]
-            elif dt in ("Sales Invoice", "Withdrawal Request"):
+            elif dt in ("Sales Invoice", "Withdrawal Request", "Customer"):
                 rights += ["write", "create"]
             for right in rights:
                 update_permission_property(dt, role, 0, right, 1)
+    # Agents add members to their own downline (permissions.prepare_downline_member); no edits.
+    update_permission_property("Sales Person", "Agent", 0, "create", 1)
     # Agents edit only their own downline prices: rows are scoped by permissions.item_price_query
     # and direct_ladder.validate_item_price. No delete for agents.
     for role in ("Agent", "Admin"):
@@ -438,3 +441,148 @@ def setup_dashboard():
         elif current:
             current.link_count += 1
     ws.save(ignore_permissions=True)
+
+
+AGENT_DESK = "Agent Desk"
+AGENT_REPORTS = ["My Sales and Commission", "My Downline Performance", "My Withdrawal History",
+                 "Direct Sales Commission", "Direct Sales Partner Summary"]
+
+
+def setup_agent_desk():
+    """Agents see one workspace with only their own work on it, whatever their tier.
+
+    The Agent module profile blocks every module but this one, which hides every other
+    workspace from the desk sidebar. It does not touch doctype permissions, so the lists
+    and reports below still work; their rows are scoped by permissions.query.
+    """
+    # No list filters: the rows are already scoped to the agent's tree by permissions.query.
+    shortcuts = [("My Team", "Sales Person", "Tree"), ("My Customers", "Customer", "List"),
+                 ("New Customer", "Customer", "New"), ("Deals", "Item", "List"),
+                 ("Item Price", "Item Price", "List"), ("My Transactions", "Sales Invoice", "List"),
+                 ("My Withdrawal Requests", "Withdrawal Request", "List")]
+    cards = ["SA Total Transactions", "SA Total Customers", "SA Active Deals"]
+    if frappe.db.exists("Workspace", AGENT_DESK):
+        ws = frappe.get_doc("Workspace", AGENT_DESK)
+    else:
+        ws = frappe.get_doc(dict(doctype="Workspace", label=AGENT_DESK, title=AGENT_DESK, module=MODULE,
+                                 public=1, icon="users", sequence_id=0))
+    ws.set("roles", [dict(role="Agent")])
+    ws.set("number_cards", [dict(number_card_name=name, label=name[3:]) for name in cards])
+    ws.set("shortcuts", [dict(label=label, type="DocType", link_to=dt, doc_view=view, color="Blue")
+                         for label, dt, view in shortcuts])
+    ws.set("links", [dict(type="Card Break", label="My Reports", link_count=len(AGENT_REPORTS))]
+           + [dict(type="Link", label=r, link_type="Report", link_to=r, is_query_report=1) for r in AGENT_REPORTS])
+    blocks = ([dict(id="agent_card_" + frappe.scrub(name), type="number_card", data=dict(number_card_name=name[3:], col=4))
+               for name in cards]
+              + [dict(id="agent_shortcut_" + frappe.scrub(s[0]), type="shortcut", data=dict(shortcut_name=s[0], col=4))
+                 for s in shortcuts]
+              + [dict(id="agent_reports", type="card", data=dict(card_name="My Reports", col=6))])
+    for name, html, style, script in ((AGENT_PROFILE_BLOCK, AGENT_PROFILE_HTML, AGENT_PROFILE_STYLE, AGENT_PROFILE_SCRIPT),
+                                      (AGENT_PRICES_BLOCK, AGENT_PRICES_HTML, AGENT_PRICES_STYLE, AGENT_PRICES_SCRIPT)):
+        setup_custom_block(name, html, style, script)
+    ws.set("custom_blocks", [dict(custom_block_name=n, label=n) for n in (AGENT_PROFILE_BLOCK, AGENT_PRICES_BLOCK)])
+    blocks.insert(0, dict(id="agent_profile", type="custom_block", data=dict(custom_block_name=AGENT_PROFILE_BLOCK, col=12)))
+    blocks.insert(len(cards) + 1 + len(shortcuts), dict(id="agent_prices", type="custom_block",
+                                                       data=dict(custom_block_name=AGENT_PRICES_BLOCK, col=12)))
+    ws.content = json.dumps(blocks)
+    ws.save(ignore_permissions=True)
+
+    profile = (frappe.get_doc("Module Profile", "Agent") if frappe.db.exists("Module Profile", "Agent")
+               else frappe.new_doc("Module Profile").update(dict(module_profile_name="Agent")))
+    profile.set("block_modules", [dict(module=m) for m in frappe.get_all("Module Def", pluck="name") if m != MODULE])
+    profile.save(ignore_permissions=True)
+    for user in frappe.get_all("Sales Person", filters={"custom_agent_user": ["is", "set"]}, pluck="custom_agent_user"):
+        apply_agent_profile(user)
+
+
+def apply_agent_profile(user):
+    """Give an agent's login the Agent role and the Agent desk. Staff who are also agents keep theirs."""
+    doc = frappe.get_doc("User", user)
+    roles = {r.role for r in doc.roles}
+    if roles & {"System Manager", "Admin"}:
+        return
+    if "Agent" not in roles:
+        doc.append("roles", dict(role="Agent"))
+    doc.module_profile = "Agent"
+    doc.save(ignore_permissions=True)
+
+
+def on_sales_person_update(doc, method=None):
+    if doc.get("custom_agent_user") and doc.has_value_changed("custom_agent_user"):
+        apply_agent_profile(doc.custom_agent_user)
+
+
+AGENT_PROFILE_BLOCK = "Agent Profile"
+AGENT_PROFILE_HTML = """<div class="agent-profile">
+  <div class="who"><div class="name"></div><div class="tier"></div></div>
+  <div class="ladder"></div>
+  <div class="facts"></div>
+</div>"""
+AGENT_PROFILE_STYLE = """.agent-profile { padding: 16px 20px; border: 1px solid var(--border-color); border-radius: 12px;
+  background: var(--card-bg); display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; }
+.who .name { font-size: 18px; font-weight: 600; color: var(--heading-color); }
+.who .tier { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px;
+  font-weight: 600; background: var(--blue-100); color: var(--blue-700); }
+.ladder { display: flex; gap: 6px; flex-wrap: wrap; }
+.ladder span { padding: 2px 8px; border-radius: 6px; font-size: 12px; color: var(--text-muted);
+  border: 1px solid var(--border-color); }
+.ladder span.me { color: var(--blue-700); border-color: var(--blue-400); font-weight: 600; }
+.facts { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); }
+.facts b { display: block; font-size: 15px; color: var(--text-color); }"""
+AGENT_PROFILE_SCRIPT = """frappe.call("supremusangel.unlisted_shares.permissions.get_agent_profile").then(({ message: p }) => {
+  if (!p) return;
+  const $ = (s) => root_element.querySelector(s);
+  $(".name").textContent = p.name;
+  $(".tier").textContent = p.tier || __("No tier set");
+  $(".ladder").innerHTML = (p.tiers || []).map((t) =>
+    `<span class="${t.name === p.tier ? "me" : ""}">${frappe.utils.escape_html(t.name)}</span>`).join("");
+  const fact = (label, value) => `<div>${label}<b>${value}</b></div>`;
+  $(".facts").innerHTML = [
+    fact(__("Reports to"), p.upline ? `${frappe.utils.escape_html(p.upline)} (${frappe.utils.escape_html(p.upline_tier || "")})` : __("Company")),
+    fact(__("Direct team"), p.direct_team),
+    fact(__("Whole downline"), p.team_size),
+    p.direct_percent != null ? fact(__("On your own sales"), p.direct_percent + "%") : "",
+    p.level > 1 && p.own_percent != null ? fact(__("On your downline's sales"), p.own_percent + "%") : "",
+  ].join("");
+});"""
+
+
+AGENT_PRICES_BLOCK = "Agent Prices"
+AGENT_PRICES_HTML = """<div class="agent-prices"><div class="title">My Prices</div>
+  <div class="hint">What you pay per share for each deal you can sell, the range your customers pay,
+  and the price you charge the people directly under you.</div><div class="rows"></div></div>"""
+AGENT_PRICES_STYLE = """.agent-prices { padding: 16px 20px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); }
+.title { font-size: 15px; font-weight: 600; color: var(--heading-color); }
+.hint { font-size: 12px; color: var(--text-muted); margin: 4px 0 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--text-muted); }
+td.none { color: var(--text-muted); }
+.empty { font-size: 13px; color: var(--text-muted); }"""
+AGENT_PRICES_SCRIPT = """frappe.call("supremusangel.unlisted_shares.direct_ladder.get_downline_prices").then(({ message: d }) => {
+  const rows = root_element.querySelector(".rows");
+  if (!d || !d.deals.length) {
+    rows.innerHTML = `<div class="empty">${__("No deal is open to you yet.")}</div>`;
+    return;
+  }
+  const money = (v) => (v == null ? `<td class="none">${__("Not set")}</td>` : `<td>${format_currency(v)}</td>`);
+  rows.innerHTML = `<table><thead><tr><th>${__("Deal")}</th><th>${__("Your Buy Price")}</th>
+    <th>${__("Customer Min")}</th><th>${__("Customer Max")}</th>
+    ${d.has_downline ? `<th>${__("Your Downline Price")}</th>` : ""}</tr></thead><tbody>` +
+    d.deals.map((r) => `<tr><td>${frappe.utils.escape_html(r.deal)}</td>${money(r.buy_price)}
+      ${money(r.minimum_selling_rate)}${money(r.maximum_selling_rate)}
+      ${d.has_downline ? money(r.downline_price) : ""}</tr>`).join("") + "</tbody></table>";
+});"""
+
+
+def setup_custom_block(name, html, style, script):
+    """A public Agent-only Custom HTML Block on the Agent Desk."""
+    doc = frappe.get_doc("Custom HTML Block", name) if frappe.db.exists("Custom HTML Block", name) \
+        else frappe.new_doc("Custom HTML Block")
+    doc.update(dict(html=html, style=style, script=script, private=0))
+    doc.set("roles", [dict(role="Agent")])
+    if doc.is_new():
+        doc.insert(ignore_permissions=True, set_name=name)
+    else:
+        doc.save(ignore_permissions=True)
