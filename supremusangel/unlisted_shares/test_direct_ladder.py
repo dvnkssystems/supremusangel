@@ -199,7 +199,15 @@ class TestDirectLadder(FrappeTestCase):
         other = frappe.db.get_value("Item Price", {"custom_agent": self.cp, "item_code": DEAL})
         frappe.set_user(user.name)
         try:
-            self.assertEqual(frappe.get_list("Item Price", filters={"item_code": DEAL}, pluck="name"), [own])
+            # Own row plus the downline's rows, read-only; never the upline's.
+            visible = frappe.get_list("Item Price", filters={"item_code": DEAL}, pluck="name")
+            downline = frappe.get_all("Item Price", filters={"item_code": DEAL, "custom_agent": ["in", [self.sra, self.assoc]]},
+                                      pluck="name")
+            self.assertCountEqual(visible, [own] + downline)
+            self.assertNotIn(other, visible)
+            for name in downline:
+                self.assertTrue(frappe.has_permission("Item Price", "read", doc=frappe.get_doc("Item Price", name)))
+                self.assertFalse(frappe.has_permission("Item Price", "write", doc=frappe.get_doc("Item Price", name)))
             self.assertFalse(frappe.has_permission("Item Price", "write", doc=frappe.get_doc("Item Price", other)))
             self.assertFalse(frappe.has_permission("Item Price", "write", doc=frappe.get_doc("Item Price", self.price_name)))
             self.assertFalse(frappe.has_permission("Item Price", "write", doc=frappe.get_doc("Item Price", self.access_name)))
