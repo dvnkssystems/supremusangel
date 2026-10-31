@@ -80,7 +80,8 @@ def acknowledge_policies(policy_names: str):
         return
 
     ip = frappe.local.request_ip if hasattr(frappe.local, "request_ip") else None
-    ua = frappe.get_request_header("User-Agent")
+    # A browser string longer than the field would refuse the whole acknowledgement.
+    ua = (frappe.get_request_header("User-Agent") or "")[:140]
 
     for policy in names:
         # Skip if already acknowledged
@@ -94,13 +95,14 @@ def acknowledge_policies(policy_names: str):
         doc = frappe.get_doc({
             "doctype": "Company Policy Acknowledgement",
             "user": user,
-            "employee":emp,
+            "employee": emp.name if emp else None,
             "policy": policy,
             "acknowledged_on": now_datetime(),
             "ip_address": ip,
             "user_agent": ua,
         })
-        doc.insert(ignore_permissions=True)
+        # Rows are named {employee}-{policy}, which is the same for everyone without an Employee.
+        doc.insert(ignore_permissions=True, set_name=None if emp else f"{user}-{policy}")
 
     frappe.db.commit()
     return {"status": "ok"}

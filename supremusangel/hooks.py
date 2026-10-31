@@ -27,7 +27,7 @@ app_license = "mit"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/supremusangel/css/supremusangel.css"
 app_include_js = [
-    "/assets/supremusangel/js/policy_ack.bundle.js",
+    "policy_ack.bundle.js",
     "/assets/supremusangel/js/shortcut_single_fix.bundle.js",
     "/assets/supremusangel/js/notification_sound.bundle.js",
     "/assets/supremusangel/js/agent_home.bundle.js",
