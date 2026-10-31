@@ -30,7 +30,10 @@ policy_compliance.show_next_policy = function() {
     }
 
     const p = pending[idx];
-    
+
+    // Sized to the screen, so the content never runs under the pinned footer.
+    const content_height = "clamp(240px, calc(100vh - 270px), 550px)";
+
     // Build the content HTML based on whether PDF exists
     let content_html = "";
     
@@ -49,7 +52,7 @@ policy_compliance.show_next_policy = function() {
             <div style="border: 1px solid #d1d8dd; border-radius: 3px; overflow: hidden;">
                 <iframe 
                     src="${pdf_url}" 
-                    style="width: 100%; height: 550px; border: none;"
+                    style="width: 100%; height: ${content_height}; border: none;"
                     title="${p.policy_title}">
                 </iframe>
             </div>
@@ -62,7 +65,7 @@ policy_compliance.show_next_policy = function() {
     } else if (p.policy_content) {
         // No PDF - show HTML content
         content_html = `
-            <div style="max-height: 550px; overflow: auto; border: 1px solid #d1d8dd; padding: 10px; border-radius: 3px;">
+            <div style="max-height: ${content_height}; overflow: auto; border: 1px solid #d1d8dd; padding: 10px; border-radius: 3px;">
                 ${p.policy_content}
             </div>
         `;
@@ -87,10 +90,6 @@ policy_compliance.show_next_policy = function() {
             fieldname: "content_0",
             fieldtype: "HTML",
             options: content_html
-        },
-        {
-            fieldname: "sb1",
-            fieldtype: "Section Break"
         },
         {
             fieldname: "acknowledge",
@@ -131,6 +130,9 @@ policy_compliance.show_next_policy = function() {
             });
         }
     });
+
+    // In the pinned footer, so it can't end up below the screen on a laptop.
+    d.get_field("acknowledge").$wrapper.appendTo(d.custom_actions);
 
     // Block closing via ESC or clicking outside
     d.$wrapper.modal({ backdrop: "static", keyboard: false });
