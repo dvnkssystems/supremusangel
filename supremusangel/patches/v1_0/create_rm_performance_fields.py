@@ -19,9 +19,6 @@ CUSTOM_FIELDS = {
 			"options": "Employee",
 			"insert_after": "lead_owner",
 			"in_standard_filter": 1,
-			# Attribution only. Every employee's own-record User Permission would
-			# otherwise hide (strict mode) every Lead whose RM is anyone else or blank.
-			"ignore_user_permissions": 1,
 		},
 		{
 			"fieldname": "custom_contact_log_section",
